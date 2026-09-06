@@ -1339,7 +1339,15 @@ var Q = [
   {id:'q21',dim:'JP', a:'有固定的归位方式', b:'自己能找到就行'},
   {id:'q22',dim:'JP', a:'对比三天，看完评测再下单', b:'差不多就买了'},
   {id:'q23',dim:'JP', a:'立刻交付，不想拖着', b:'再改改，说不定能更好'},
-  {id:'q24',dim:'JP', a:'提前拆好，稳稳推进', b:'最后几天效率最高'}
+  {id:'q24',dim:'JP', a:'提前拆好，稳稳推进', b:'最后几天效率最高'},
+  // ---- JP · B1 新增：P 语义族（非计划语境，给 P 核的人如实答 P 的出口）----
+  {id:'q25',dim:'JP', a:'先问清几点结束再决定', b:'换衣服就走，回来再说'},
+  {id:'q26',dim:'JP', a:'盯住一件做完，再开下一件', b:'三件来回切，哪件来劲做哪件'},
+  {id:'q27',dim:'JP', a:'早就弄完了，只核对一遍', b:'那晚才真正动手，边做边定'},
+  // ---- JP · B2 新增：J 语义族（期限 / 守时 / 常规 三族，取自 _item_pool 六节）----
+  {id:'q28',dim:'JP', a:'自己定个时间点，照样往前推', b:'没人催就一直悬着，也不难受'},
+  {id:'q29',dim:'JP', a:'提前几分钟到，等人也不急', b:'踩点到，偶尔晚一点'},
+  {id:'q30',dim:'JP', a:'基本固定，省得再想', b:'经常临时换，看当天心情'}
 ];
 
 var Q_TEXT = {
@@ -1366,7 +1374,16 @@ var Q_TEXT = {
   q21: '你的桌面和电脑文件夹——',
   q22: '买一个三千块的东西，你——',
   q23: '一个任务提前完成了，你会——',
-  q24: '面对一个明确的 deadline，你的节奏是——'
+  q24: '面对一个明确的 deadline，你的节奏是——',
+  // B1：P 语义族（即兴出行 / 并行多线 / 最后一刻定稿）—— 题面不含任何计划族词，
+  //     保证被判为 open 族，用来接住「计划语境下 P 核也会答 J」导致的 J 票虚高。
+  q25: '朋友临时发消息说“现在出来”，你一般——',
+  q26: '手上有三件事都开了头时，你实际会——',
+  q27: '东西要交的前一晚，你一般在——',
+  // B2：J 语义族（期限 / 守时 / 常规）—— 题面各含一个族别词，被 plan/deadline/punctual/routine 命中。
+  q28: '没有硬性期限的活儿，你反而会——',
+  q29: '说到守时，你实际更常是——',
+  q30: '每天那些例行的事（通勤、吃饭），你——'
 };
 
 /* =========================================================
@@ -1616,7 +1633,7 @@ var ACTIVE_PROVIDER_ID = 'zhipu';
    （Key 存 Cloudflare 环境变量，不进仓库 / 不进浏览器）。本地与 workbuddy.link 保持 false → Gemini 直连（写死 Key）。 */
 var USE_CF_GEMINI_PROXY = /*__CF_GEMINI_PROXY__*/true;
 /* 页面版本：改动后递增。设置面板会显示它，用户一眼可确认浏览器跑的不是缓存旧版。 */
-var APP_VER = '0905-17';
+var APP_VER = '0905-18';
 
 /* =========================================================
    预设接口表（单一事实源）—— 自定义 provider 的快捷填充。
@@ -2120,8 +2137,26 @@ function isEventAnchor(t){ return /最近一次|最近一回|曾经|这些年|�
 
 /* 规则2 依赖：假想题机器判定（题干假想词 或 模型自报 grade） */
 function isHypoChoice(q){ return q.grade === 'hypothetical' || /如果|假如|要是/.test(q.t); }
-/* 规则3 依赖：JP「计划语义族」机器判定 */
-function isPlanFamily(t){ return /计划|清单|行程|日程|时间表|安排表|固定|收尾|deadline|截止|交付日|to.?do/i.test(t); }
+/* 规则3 依赖：JP「计划语义族」机器判定。
+   A1 修订：补进 J 味族漏网的 期限 / 守时 / 迟到 / 常规 / 例行 / 固定流程——
+   旧词表只认「计划/清单/行程/收尾」，AI 用「期限/守时/常规」造句的 J 味题会整族漏判，
+   JP 三道全是 J 味语境时无人拦截（真实案例：老版 ENTP → 新版 ESTJ，J 票被计划语境灌高）。 */
+function isPlanFamily(t){ return /计划|清单|行程|日程|时间表|安排表|固定|固定流程|收尾|deadline|截止|交付日|期限|守时|迟到|(?:^|[^非])常规|例行|to.?do/i.test(t); }
+
+/* A4 依赖：JP 语义族细分（用于 audit 按族分布输出 + G5b 题库族别断言）。
+   各族正则的并集 === isPlanFamily 的词表，保证「计划族 ⟺ 族别 !== 'open'」恒等。 */
+var JP_FAMILIES = [
+  { id:'plan',     label:'计划',   re:/计划|清单|行程|日程|时间表|安排表|to\.?do/i },
+  { id:'deadline', label:'期限',   re:/deadline|截止|期限|交付日/i },
+  { id:'punctual', label:'守时',   re:/守时|迟到/i },
+  { id:'routine',  label:'常规',   re:/(?:^|[^非])常规|例行|固定流程|固定/i },
+  { id:'closure',  label:'收尾',   re:/收尾/i }
+];
+/* 'open' = 非计划族（即兴 / 并行多线 / 最后一刻定稿 / 悬置不难受 等 P 味语境） */
+function jpFamilyOf(t){
+  for(var i=0;i<JP_FAMILIES.length;i++) if(JP_FAMILIES[i].re.test(t)) return JP_FAMILIES[i].id;
+  return 'open';
+}
 /* 规则5 依赖：伪维度题（「责任 vs 奖励」这类两边都不落维度极的对立） */
 function isPseudoDim(q){
   var a = q.A ? q.A.text : '', b = q.B ? q.B.text : '';
@@ -2201,6 +2236,22 @@ function hardenGenerated(ai){
   for(var i2 = ai.choice.length - 1; i2 >= 0; i2--){
     if(isPseudoDim(ai.choice[i2])){ drop('伪维度', ai.choice[i2]); ai.choice.splice(i2, 1); }
   }
+  /* 规则3b（A3）：JP 语义平衡——AI 返回的 JP 题若 0 道非计划族（全落 J 味语境），
+     丢 1 道计划族 JP 题腾出槽位，交由补生成 / bank 补一道 P 味语境。
+     放规则3 之前：3 道 JP 全计划族时只丢这 1 道；若放在规则3 之后，
+     规则3 会先把总数削到 2、这里再丢 1，等于白丢两道。 */
+  (function(){
+    /* 下限保护：JP 至少 2 道才丢——只有 1 道时丢掉等于把 JP 维从生成题里清空，
+       补生成/bank 未必补得回，反而比留着一道计划族更糟（I2 回归即此场景）。 */
+    var jpQs = ai.choice.filter(function(q){ return q.dim === 'JP'; });
+    if(jpQs.length >= 2 && !jpQs.some(function(q){ return !isPlanFamily(q.t); })){
+      for(var i = ai.choice.length - 1; i >= 0; i--){
+        if(ai.choice[i].dim === 'JP' && isPlanFamily(ai.choice[i].t)){
+          drop('JP语义失衡', ai.choice[i]); ai.choice.splice(i, 1); break;   // 只丢 1 道
+        }
+      }
+    }
+  })();
   /* 规则3（修订①）：计划语义大族跨维度合并计数，生成侧 >2 即违规 */
   var planAllSeen = 0;
   for(var i3 = ai.choice.length - 1; i3 >= 0; i3--){
@@ -2275,7 +2326,15 @@ function auditFinal(set, ai){
   var dq = { EI:0, SN:0, TF:0, JP:0 };
   set.choice.forEach(function(q){ if(dq[q.dim] != null) dq[q.dim]++; });
   a.dimQuota = dq;
-  a.jpScored = dq.JP;
+  a.jpScored = dq.JP;          // 保持数值（向后兼容），分布见 a.jpFam
+  /* A4：JP 计分题按语义族分布输出——plan/deadline/punctual/routine/closure 为 J 味族，
+     open 为非计划族（即兴 / 并行多线 / 最后一刻 / 悬置）。族别并集 == 计划族，故
+     open + 各族之和 === jpScored。 */
+  var jpFam = { plan:0, deadline:0, punctual:0, routine:0, closure:0, open:0 };
+  set.choice.forEach(function(q){ if(q.dim === 'JP') jpFam[jpFamilyOf(q.t)]++; });
+  a.jpFam      = jpFam;
+  a.jpNonPlan  = jpFam.open;                                   // 非计划族计数（P 味语境）
+  a.jpPlanTotal= dq.JP - jpFam.open;                           // 计划族合计（J 味语境）
   a.jpPlanFamilyAll = set.choice.filter(function(q){ return q.dim === 'JP' && isPlanFamily(q.t); }).length;
   var quotaOK = DIM_KEYS.every(function(k){ return dq[k] >= 4 && dq[k] <= 6; });
   a.finalPass = quotaOK && dq.JP <= 6;
@@ -2640,9 +2699,14 @@ function buildPrompt(){
 '   - own 情境用中性、实际、可观察的句式（见 A 第二例），不要写成「你自由安排时…」这种带诱导的问法。',
 '   - 若用户背景显示时间几乎全被外部结构占据（全日制学生 / 排班工作 / 备考等），',
 '     own 题改为问「被安排的间隙里（课间 / 通勤 / 睡前）你实际在干什么？」。',
-'   - JP 语义分散（硬规则）：JP 题的情境禁止全部落在「计划 / 清单 / 行程」语义区，',
-'     至少覆盖两个不同语义区。备选语义区：改动既有安排 / deadline 前后节奏 / 收尾交付时机 /',
-'     整理与归位 / 突发变化应对 / 未决事项悬置。锚点题侧已有 3 道「计划系」JP 题，生成题必须错开。',
+'   - JP 语义族覆盖（硬规则）：你出的 JP 题须覆盖 ≥2 个语义族，且**至少 1 道必须来自「非结构·收束族」**。',
+'     语义族定义：',
+'       · 结构·收束族（J 味语境）：计划 / 清单 / 行程 / 日程 / 时间表 / 期限 / 截止 / deadline /',
+'         守时 / 迟到 / 常规 / 例行 / 固定流程 / 收尾 / 交付。',
+'       · 非结构族（P 味语境，必须至少 1 道）：临时起意 / 即兴出行 / 并行多线来回切 /',
+'         最后一刻才定稿 / 未决事项悬着也不难受 / 突发变化后随势调整。',
+'     禁止 3 道 JP 题全部落在「结构·收束」族——计划语境下 P 核的人也会如实答 J，J 票被语境灌高，',
+'     实测会把 ENTP 测成 ESTJ。锚点侧 JP 已有 1 道计划系（J1）、2 道开放族，生成题须错开。',
 '',
 'D. 假想题准入（唯一例外条款）：',
 '   - 自画像式假想绝对禁止：❌「如果没人要求你，你会很自律吗？」',
@@ -2677,7 +2741,8 @@ function buildPrompt(){
 '- 逐题检查 1~9：题干必须含实忆锚点词（过去X / 上周 / 上个月 / 最近一次 / 多少次 / 几次），',
 '  或「实际」+ 具体实忆场景；「你更倾向于？」「你是如何…」「你会如何…」这类无锚点情境问法必须重写。',
 '- 任何题干不得同时出现「如果」与「过去…实际」。',
-'- JP 题情境至少横跨 2 个语义区，不得全落「计划 / 清单 / 行程」。',
+'- JP 题须跨 ≥2 个语义族，且至少 1 道属「非结构族」（临时起意 / 即兴出行 / 并行多线 / 最后一刻定稿），',
+'  3 道全落「计划 / 期限 / 守时 / 常规」等结构·收束族 = 废卷，必须重写。',
 '',
 '【输出格式】严格只输出 JSON，不要解释、不要 markdown 代码块、字符串用英文双引号：',
 '{"choice":[{"q":"题干","A":{"text":"选项A","dim":"E"},"B":{"text":"选项B","dim":"I"},"ctx":"work"}],',
