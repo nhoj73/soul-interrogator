@@ -29,7 +29,11 @@
 - Cloudflare Pages → 你的项目 → **Settings → Environment variables**
 - 添加变量：`GEMINI_KEY` = 你的 Google AI Studio Key（`aistudio.google.com/apikey`）
 - **Production** 环境也要加（不是只加 Preview）
-- 保存后**重新部署一次**（Deployments → 最新 → Retry / 或推一次空提交）让变量生效
+- 保存后**必须重新部署一次**才会生效：环境变量在部署时注入，
+  改完变量不会自动应用到已有部署。重新部署方式：推一次提交（推荐，会自动触发），
+  或 Deployments → 最新一次 → Retry deployment。
+  验证是否生效：访问 `/api/gemini-proxy` 发一个 chat 请求，返回正常补齐结果即生效；
+  若返回 `GEMINI_KEY 未配置`，说明当前部署是在加变量之前构建的，需再部署一次。
 
 此后朋友选 Gemini 即可直接用，无需自己贴 Key；Key 全程不出现在公网。
 
