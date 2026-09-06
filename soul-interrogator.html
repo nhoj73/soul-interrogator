@@ -1633,7 +1633,7 @@ var ACTIVE_PROVIDER_ID = 'zhipu';
    （Key 存 Cloudflare 环境变量，不进仓库 / 不进浏览器）。本地与 workbuddy.link 保持 false → Gemini 直连（写死 Key）。 */
 var USE_CF_GEMINI_PROXY = /*__CF_GEMINI_PROXY__*/true;
 /* 页面版本：改动后递增。设置面板会显示它，用户一眼可确认浏览器跑的不是缓存旧版。 */
-var APP_VER = '0905-18';
+var APP_VER = '0905-19';
 
 /* =========================================================
    预设接口表（单一事实源）—— 自定义 provider 的快捷填充。
@@ -4090,7 +4090,7 @@ var ASSESS_SYS = [
 '    "advice": "职场与关系建议，150-220 字，给可执行的动作，不要正确的废话",',
 '    "roast": "一句带梗的吐槽，不超过 40 字"',
 '  },',
-'  "evidence": ["你写了「原话」，这说明……", "你写了「原话」，这说明……"],',
+'  "evidence": ["你写了「周三把拖了两周的 bug 修了」，这说明遇到难题你会先动手排查", "……（每条同构：原样摘抄 + 具体推断）"],',
 '  "replies_review": [{"quote":"用户原话摘抄","read":"神回复解读，50-90 字"}]',
 '  "evidence_contradiction": [',
 '    {"label_quote":"原样摘抄的标签句（self 模式=用户自述的标签；朋友模式=用户转述的 TA 自述）",',
@@ -4101,7 +4101,11 @@ var ASSESS_SYS = [
 '',
 '【硬性约束】',
 '- dims 里每一对（E+I、S+N、T+F、J+P）必须加起来等于 100。',
-'- evidence 2-4 条，每条必须原样引用用户写过的原话，禁止编造、禁止改写。',
+'- evidence 每条必须原样摘抄【用户自由文本】里用户亲口写下的句子，禁止编造、禁止改写、',
+'  禁止引用题面 / 选项 / 本格式示例里的示例句。注意：上面 JSON 里的 evidence 示例只是格式示意，',
+'  绝不许把「周三把拖了两周的 bug 修了」这类示例句当成用户原话来引用。',
+'- 若【用户自由文本】为空（用户简答全部跳过 / 留空、题内自定义一条没写——即一个字都没写），',
+'  evidence 必须输出 []（空数组），一条也不许输出。没有原话可引就不引，宁缺毋滥。',
 '- replies_review 挑 1-2 条用户自由作答里最有个性、最能说明问题的，quote 必须原样摘抄。',
 '- evidence_contradiction 为可选数组（0~2 条），记录「标签句」与「行为句」的冲突：',
 '   self 模式引用用户自述的标签 vs 其描述的行为；朋友模式引用用户转述的 TA 自述 vs 用户实际观察到的行为。',
@@ -4581,6 +4585,23 @@ function normalizeAssess(d, mechCode, sc){
     evidence = d.evidence.map(function(x){
       return String(typeof x === 'object' ? (x.text || x.t || x.e || '') : x).trim();
     }).filter(Boolean).slice(0, 4);
+    /* 用户输入状态判定（分享图/结果页证据块唯一事实源）：
+       collectFreeText() 为空 = 用户全程没写一个字（简答全跳过/留空、题内自定义零条）。
+       此时任何 evidence 都不可能是「原样引用用户原话」——只能是编造，
+       或照抄了 prompt 格式示例的占位符（真实事故：墙上出现「你写了「原话」，这说明…」）。
+       整块丢弃，渲染层 if(ev.length) 自然跳过证据模块。
+       有自由文本时，再兜一道：过滤照抄示例占位「原话」二字的条目。 */
+    if(!collectFreeText().length){
+      evidence = [];
+    }else{
+      var userText = collectFreeText().map(function(x){ return x.a || ''; }).join('\n');
+      evidence = evidence.filter(function(x){
+        if(x.indexOf('你写了「原话」') > -1) return false;   // 照抄格式示例占位符
+        var m = x.match(/你写了「([^」]+)」/);
+        if(!m) return true;                                  // 非「你写了…」句式，无法核验，放行
+        return userText.indexOf(m[1]) > -1;                  // 引号内必须真出自由文本，否则是编的
+      });
+    }
   }
 
   var replies = [];
