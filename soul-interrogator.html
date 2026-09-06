@@ -1584,7 +1584,7 @@ var PROVIDERS = {
   gemini: {
     id:'gemini', label:'Google Gemini（海外）',
     endpoint:'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-    keys:[],          // 公开托管版不写死 Key：朋友选 Gemini 时在界面自贴（防 Key 泄露）
+    keys:[],
     fallbackKeys:[],
     /* 模型链：按能力从好到差（免费 tier）：3.7 → 3.6 → 3.5 → 3-flash-preview → 3.5-lite → 3.1-lite */
     models:['gemini-3.7-flash','gemini-3.6-flash','gemini-3.5-flash','gemini-3-flash-preview','gemini-3.5-flash-lite','gemini-3.1-flash-lite'],
@@ -1608,11 +1608,15 @@ var API = {
   timeout:30000, retries:1, backoff:[4000,8000],
   maxTokens:16384,
   sendThinking:false, thinking:false,
+  viaProxy:false,                 // Cloudflare 代理模式：true 时 Gemini 走同源函数，客户端不持 Key
   providerId:'zhipu', providerLabel:''
 };
 var ACTIVE_PROVIDER_ID = 'zhipu';
+/* Cloudflare Pages 部署时由构建命令注入 true：Gemini 走同源 /api/gemini-proxy
+   （Key 存 Cloudflare 环境变量，不进仓库 / 不进浏览器）。本地与 workbuddy.link 保持 false → Gemini 直连（写死 Key）。 */
+var USE_CF_GEMINI_PROXY = /*__CF_GEMINI_PROXY__*/true;
 /* 页面版本：改动后递增。设置面板会显示它，用户一眼可确认浏览器跑的不是缓存旧版。 */
-var APP_VER = '0905-16';
+var APP_VER = '0905-17';
 
 /* =========================================================
    预设接口表（单一事实源）—— 自定义 provider 的快捷填充。
@@ -1709,12 +1713,19 @@ function applyProvider(id, persist){
     API.sendThinking = false; API.thinking = false;
   }else{
     var keys = (p.keys || []).slice();
-    API.key = keys.shift() || '';
-    API.fallbackKeys = keys.concat(p.fallbackKeys || []);
+    API.viaProxy = false;
+    if(p.id === 'gemini' && USE_CF_GEMINI_PROXY){
+      /* Cloudflare 代理模式：端点切到同源函数，客户端不持 Key（由函数服务端填） */
+      API.endpoint = '/api/gemini-proxy';
+      API.key = ''; API.fallbackKeys = []; API.viaProxy = true;
+    }else{
+      API.key = keys.shift() || '';
+      API.fallbackKeys = keys.concat(p.fallbackKeys || []);
+      API.endpoint = p.endpoint || '';
+    }
     var models = (p.models || []).slice();
     API.model = models.shift() || '';
     API.fallbackModels = models;
-    API.endpoint = p.endpoint || '';
     API.maxTokens = p.maxTokens || 16384;
     API.sendThinking = !!p.sendThinking; API.thinking = !!p.thinking;
   }
@@ -3344,7 +3355,7 @@ function bgSig(){
 /* 出题入口：已有题集且背景未变 → 直接续答，否则重新生成 */
 async function startTest(){
   var sig = bgSig();
-  var useAI = !!(API.enabled && API.key && API.key.length > 10);
+  var useAI = !!(API.enabled && (API.key && API.key.length > 10 || API.viaProxy));
   /* 复用缓存题集的三个前提：① 题集存在 ② 背景没变 ③ 题集来源（AI 生成 vs 通用降级题库）
      和当前 AI 可用性一致。否则会踩坑：上次空 Key / 失败缓存的是降级 bank 题集（qfall='noconf'），
      用户切到 Gemini（已有有效 Key）但背景没变 → 直接复用旧题集 → 顶部一直显示陈旧的「未配置 API」。
@@ -4708,7 +4719,7 @@ async function runAssessment(sc, mechCode){
   var box = document.getElementById('ai-box');
   if(!box) return;
 
-  var canAI = !!(API.enabled && API.key && API.key.length > 10);
+  var canAI = !!(API.enabled && (API.key && API.key.length > 10 || API.viaProxy));
   if(!canAI){
     S.assess = { ok:false, reason:'noconf' }; save();
     box.innerHTML = '<div class="ai-head"><span>✨ AI 综合评估</span></div>'
