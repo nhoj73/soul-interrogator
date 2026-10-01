@@ -1,7 +1,11 @@
-# OS / editor junk
-.DS_Store
-*.swp
-*.log
+# 内部 agent 配置，不入库
+.workbuddy/
 
-# Node (not needed for this static site)
-node_modules/
+# macOS 系统文件
+.DS_Store
+
+# 独立部署仓库（自带 .git，不并入主仓库）
+soul-interrogator-pages/
+
+# 与本项目无关的其他项目
+amino-acid-trainer.html

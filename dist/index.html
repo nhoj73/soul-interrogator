@@ -1590,8 +1590,8 @@ var PROVIDERS = {
   zhipu: {
     id:'zhipu', label:'智谱 AutoGLM',
     endpoint:'https://open.bigmodel.cn/api/paas/v4/chat/completions',
-    keys:['0219b4bd9a0d4d368051a6fbfbbdf5b2.oSYmxEAM1SN2hZXw'],
-    fallbackKeys:['sk-13d37e3d3d664781a56494b3dce37caa'],
+    keys:['REPLACE_WITH_YOUR_ZHIPU_KEY'],
+    fallbackKeys:['REPLACE_WITH_YOUR_ZHIPU_KEY'],
     /* 模型链：glm-4.7-flash 回链首；glm-4.6 移到第 2 位兜底，一个没删。 */
     models:['glm-4.7-flash','glm-4-flash','glm-4.6','glm-4.5-flash'],
     maxTokens:16384,
@@ -1601,7 +1601,7 @@ var PROVIDERS = {
   gemini: {
     id:'gemini', label:'Google Gemini（海外）',
     endpoint:'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-    keys:[],
+    keys:['REPLACE_WITH_YOUR_GEMINI_KEY'],
     fallbackKeys:[],
     /* 模型链：按能力从好到差（免费 tier）：3.7 → 3.6 → 3.5 → 3-flash-preview → 3.5-lite → 3.1-lite */
     models:['gemini-3.7-flash','gemini-3.6-flash','gemini-3.5-flash','gemini-3-flash-preview','gemini-3.5-flash-lite','gemini-3.1-flash-lite'],
@@ -1631,7 +1631,7 @@ var API = {
 var ACTIVE_PROVIDER_ID = 'zhipu';
 /* Cloudflare Pages 部署时由构建命令注入 true：Gemini 走同源 /api/gemini-proxy
    （Key 存 Cloudflare 环境变量，不进仓库 / 不进浏览器）。本地与 workbuddy.link 保持 false → Gemini 直连（写死 Key）。 */
-var USE_CF_GEMINI_PROXY = /*__CF_GEMINI_PROXY__*/true;
+var USE_CF_GEMINI_PROXY = /*__CF_GEMINI_PROXY__*/false;
 /* 页面版本：改动后递增。设置面板会显示它，用户一眼可确认浏览器跑的不是缓存旧版。 */
 var APP_VER = '0905-19';
 

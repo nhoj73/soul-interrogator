@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>氨基酸随机抽取器 · 大师版</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    display: flex; justify-content: center; align-items: flex-start;
+    min-height: 100vh; margin: 0; padding: 20px 14px 60px;
+    background: #eef2f7;
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    color: #2c3e50;
+  }
+  .card {
+    background: #fff; padding: 26px 34px 34px; border-radius: 18px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.10);
+    text-align: center; max-width: 880px; width: 100%;
+    position: relative; overflow: hidden;
+  }
+  h1 { color: #2c3e50; font-size: 21px; margin: 0 0 6px; letter-spacing: 1px; }
+  h1 .ver {
+    font-size: 12px; color: #fff; background: #8e44ad; padding: 2px 9px;
+    border-radius: 20px; vertical-align: middle; margin-left: 8px; letter-spacing: 0;
+    font-weight: normal;
+  }
+  .sub { font-size: 12px; color: #95a5a6; margin: 0 0 12px; }
+
+  /* 升级版缎带 */
+  .ribbon {
+    position: absolute; top: 14px; right: -42px; transform: rotate(38deg);
+    background: linear-gradient(90deg,#e67e22,#f39c12); color: #fff;
+    font-size: 12px; font-weight: bold; padding: 5px 50px; letter-spacing: 2px;
+    box-shadow: 0 2px 6px rgba(0,0,0,.2); pointer-events: none;
+  }
+
+  /* 模块导航 */
+  .tabs { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 6px 0 16px; }
+  .tab {
+    border: 1px solid #dbe6f3; background: #f7faff; color: #34495e;
+    padding: 7px 13px; font-size: 13px; border-radius: 20px; cursor: pointer;
+    font-family: inherit; transition: all .15s;
+  }
+  .tab:hover { background: #eaf1fb; }
+  .tab.active { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+
+  /* 原版英雄区（保留原样） */
+  .name {
+    font-size: 32px; font-weight: bold; color: #1a73e8;
+    min-height: 46px; line-height: 46px;
+  }
+  .detail { font-size: 15px; color: #666; margin-top: 2px; min-height: 24px; }
+  .note { font-size: 13px; color: #e67e22; margin-top: 2px; min-height: 18px; }
+  .svgwrap { margin: 2px 0 10px; }
+  button.draw {
+    background: #1a73e8; color: #fff; border: none;
+    padding: 14px 52px; font-size: 17px; border-radius: 10px;
+    cursor: pointer; transition: background .2s, transform .1s;
+    font-family: inherit; letter-spacing: 2px;
+  }
+  button.draw:hover { background: #0d5bbd; }
+  button.draw:active { transform: scale(.97); }
+
+  button.alt {
+    background: #fff; color: #1a73e8; border: 1.5px solid #1a73e8;
+    padding: 9px 18px; font-size: 14px; border-radius: 9px; cursor: pointer;
+    font-family: inherit; transition: all .15s; margin: 4px 3px;
+  }
+  button.alt:hover { background: #eaf1fb; }
+  button.alt:disabled { opacity: .45; cursor: not-allowed; }
+
+  /* 抽中后的详情卡 */
+  .info {
+    text-align: left; margin: 14px auto 0; max-width: 640px;
+    background: #f8fafc; border: 1px solid #eef2f7; border-radius: 12px; padding: 14px 16px;
+    display: none;
+  }
+  .info.show { display: block; }
+  .info h3 { margin: 0 0 8px; font-size: 15px; color: #1a73e8; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 18px; font-size: 13px; }
+  .grid .k { color: #7f8c8d; }
+  .grid .v { color: #2c3e50; font-weight: 600; }
+  .beads { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; margin-top: 10px; justify-content: center; }
+  .bead { background: #fff; border: 1.5px solid #c0392b; color: #c0392b; border-radius: 7px;
+          padding: 4px 8px; font-size: 12px; font-weight: bold; font-family: Arial,Helvetica,sans-serif; }
+  .bond { color: #95a5a6; font-weight: bold; }
+  .ringnote { font-size: 11px; color: #e67e22; margin-top: 4px; text-align: center; }
+
+  /* 通用面板 */
+  .panel { display: none; text-align: left; }
+  .panel.active { display: block; }
+  .panel h2 { font-size: 16px; color: #2c3e50; border-left: 4px solid #1a73e8; padding-left: 10px; margin: 4px 0 14px; }
+  .panel p.lead { font-size: 13px; color: #7f8c8d; margin: 0 0 14px; }
+
+  textarea, input[type=text], input[type=password], select {
+    width: 100%; padding: 10px 12px; border: 1px solid #dbe6f3; border-radius: 9px;
+    font-family: inherit; font-size: 14px; color: #2c3e50; background: #fff;
+  }
+  textarea { resize: vertical; min-height: 90px; }
+  label { font-size: 13px; color: #34495e; display: block; margin: 12px 0 5px; font-weight: 600; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .row > * { flex: 1 1 200px; }
+
+  .ai-out {
+    margin-top: 14px; background: #f8fafc; border: 1px solid #eef2f7; border-radius: 12px;
+    padding: 14px 16px; font-size: 14px; line-height: 1.7; color: #2c3e50; white-space: pre-wrap;
+    min-height: 40px;
+  }
+  .ai-out.loading { color: #95a5a6; }
+  .badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 12px; background: #eaf1fb; color: #1a73e8; margin-left: 6px; }
+
+  /* 测验 */
+  .qcard { background: #f8fafc; border: 1px solid #eef2f7; border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+  .qcard .qt { font-size: 14px; font-weight: 600; margin-bottom: 10px; }
+  .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .opt { border: 1.5px solid #dbe6f3; background: #fff; border-radius: 9px; padding: 10px 12px;
+         cursor: pointer; font-size: 14px; font-family: inherit; text-align: left; transition: all .12s; }
+  .opt:hover { background: #eaf1fb; }
+  .opt.correct { background: #e8f8ef; border-color: #27ae60; color: #1e8449; }
+  .opt.wrong { background: #fdecea; border-color: #e74c3c; color: #c0392b; }
+  .opt:disabled { cursor: default; }
+  .qmeta { font-size: 12px; color: #7f8c8d; margin-top: 8px; }
+  .progress { height: 8px; background: #eef2f3; border-radius: 6px; overflow: hidden; margin: 10px 0; }
+  .progress > div { height: 100%; background: #1a73e8; width: 0; transition: width .25s; }
+  .scorebox { text-align: center; font-size: 22px; font-weight: bold; color: #1a73e8; margin: 10px 0; }
+
+  /* 序列分析 */
+  table.seq { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
+  table.seq th, table.seq td { border: 1px solid #eef2f3; padding: 5px 6px; text-align: center; }
+  table.seq th { background: #f2f6fb; color: #34495e; }
+  .strip { display: flex; flex-wrap: wrap; gap: 2px; margin: 8px 0; }
+  .cell { width: 26px; height: 26px; border-radius: 5px; color: #fff; font-size: 12px; font-weight: bold;
+          display: flex; align-items: center; justify-content: center; font-family: Arial; }
+  .motif { font-size: 13px; background: #fff8ec; border: 1px solid #f6e2bf; border-radius: 8px; padding: 8px 12px; margin: 6px 0; }
+  .motif b { color: #e67e22; }
+
+  /* 设置 */
+  .provbox { border: 1px solid #eef2f3; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; background: #fbfdff; }
+  .hint { font-size: 12px; color: #95a5a6; margin-top: 4px; }
+  .warn { font-size: 12px; color: #c0392b; background: #fdecea; border-radius: 8px; padding: 8px 12px; margin-top: 10px; }
+  .okmsg { font-size: 12px; color: #27ae60; margin-top: 6px; }
+  .foot { font-size: 11px; color: #b2bec3; text-align: center; margin-top: 22px; }
+  a { color: #1a73e8; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="ribbon">全面升级版</div>
+  <h1>🧬 氨基酸随机抽取器 <span class="ver">大师版</span></h1>
+  <div class="sub">原版随机抽取 · 现全面升级：AI 讲解 / 智能出题判卷 / 记忆复习 / 序列分析 / 任意 AI 接入</div>
+
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-tab="home">🎲 随机抽取</button>
+    <button class="tab" data-tab="ai">🤖 AI 讲解</button>
+    <button class="tab" data-tab="quiz">📝 出题测验</button>
+    <button class="tab" data-tab="srs">🧠 记忆复习</button>
+    <button class="tab" data-tab="seq">🧪 序列分析</button>
+    <button class="tab" data-tab="set">⚙️ 设置 / AI</button>
+  </div>
+
+  <!-- ============ 英雄区（原版保留） ============ -->
+  <div id="panel-home" class="panel active">
+    <div class="name" id="name">点击下方按钮开始抽取</div>
+    <div class="detail" id="detail"></div>
+    <div class="note" id="note"></div>
+    <div class="svgwrap" id="svgwrap"></div>
+    <label for="fisch-toggle" style="display:block;text-align:center;font-size:12.5px;color:#7f8c8d;margin:-2px 0 10px;cursor:pointer;user-select:none">
+      <input type="checkbox" id="fisch-toggle" style="vertical-align:-2px;margin-right:4px">显示费歇尔投影式（L-型：COOH 上 / R 下 / NH₂ 左 / H 右）
+    </label>
+    <button class="draw" id="btn">随机抽取</button>
+
+    <div class="info" id="info">
+      <h3 id="info-title"></h3>
+      <div class="grid" id="info-grid"></div>
+      <div class="beads" id="beads"></div>
+      <div class="ringnote" id="ringnote"></div>
+      <div style="text-align:center;margin-top:12px">
+        <button class="alt" id="btn-ai" disabled>🤖 让 AI 讲讲它</button>
+        <button class="alt" id="btn-srs">➕ 加入复习</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ AI 讲解 ============ -->
+  <div id="panel-ai" class="panel">
+    <h2>🤖 AI 讲解</h2>
+    <p class="lead">选中任意氨基酸，调用你已配置的 AI（默认内置智谱，国内直连可用；也可切到 Gemini 或任意 OpenAI 兼容接口）。讲解含结构要点、分类依据、生理功能、记忆口诀与考试易错点。</p>
+    <label>选择氨基酸</label>
+    <select id="ai-sel"></select>
+    <div style="text-align:center;margin-top:12px">
+      <button class="alt" id="ai-go">🤖 开始讲解</button>
+    </div>
+    <div class="ai-out" id="ai-out">尚未讲解。</div>
+  </div>
+
+  <!-- ============ 出题测验 ============ -->
+  <div id="panel-quiz" class="panel">
+    <h2>📝 出题测验</h2>
+    <p class="lead">规则题完全离线、即时判卷并自动进入记忆复习；点「AI 出题 / 判卷」可让大模型生成开放题并自动批改。</p>
+    <div class="row">
+      <div>
+        <label>题目数量</label>
+        <select id="quiz-n">
+          <option>5</option><option selected>10</option><option>15</option><option>20</option>
+        </select>
+      </div>
+      <div>
+        <label>题型</label>
+        <select id="quiz-type">
+          <option value="mix">混合（推荐）</option>
+          <option value="name">认名称 / 三字母</option>
+          <option value="cat">认分类 / 电荷 / 必需性</option>
+          <option value="codon">认密码子</option>
+          <option value="rgroup">认 R 基</option>
+        </select>
+      </div>
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;font-weight:normal">
+      <input type="checkbox" id="quiz-ai" style="width:auto"> 使用 AI 出题 + 开放题判卷（需联网与可用 AI）
+    </label>
+    <div style="text-align:center;margin-top:12px">
+      <button class="alt" id="quiz-go">▶ 开始测验</button>
+    </div>
+    <div class="progress"><div id="quiz-prog"></div></div>
+    <div id="quiz-area"></div>
+    <div class="scorebox" id="quiz-score" style="display:none"></div>
+  </div>
+
+  <!-- ============ 记忆复习（SRS） ============ -->
+  <div id="panel-srs" class="panel">
+    <h2>🧠 记忆复习（间隔重复 SM-2）</h2>
+    <p class="lead">基于你测验与手动加入的记录，自动排程复习。到期的氨基酸会进入复习队列，答对则拉长间隔，答错则重置。</p>
+    <div id="srs-stat" style="font-size:14px;margin-bottom:10px"></div>
+    <div style="text-align:center">
+      <button class="alt" id="srs-go">▶ 复习到期内容</button>
+      <button class="alt" id="srs-reset">清空进度</button>
+    </div>
+    <div class="progress" style="display:none" id="srs-progwrap"><div id="srs-prog"></div></div>
+    <div id="srs-area"></div>
+  </div>
+
+  <!-- ============ 序列分析 ============ -->
+  <div id="panel-seq" class="panel">
+    <h2>🧪 序列分析</h2>
+    <p class="lead">粘贴肽链序列（单字母或三字母，自动识别），分析每个残基的疏水性、电荷、分类、分子量，并识别常见基序（N-糖基化、磷酸化位点、二硫键、芳香族残基等）。</p>
+    <label>肽链序列</label>
+    <textarea id="seq-in" placeholder="例如：MKTAYIAKQR... 或 Met Lys Thr Ala Tyr ...（支持单/三字母混排）"></textarea>
+    <div style="text-align:center;margin-top:10px">
+      <button class="alt" id="seq-go">🔍 分析</button>
+      <button class="alt" id="seq-clear">清空</button>
+    </div>
+    <div id="seq-out"></div>
+  </div>
+
+  <!-- ============ 设置 / AI ============ -->
+  <div id="panel-set" class="panel">
+    <h2>⚙️ 设置 / AI 接入</h2>
+    <p class="lead">本工具支持「任何 AI API」：内置智谱、Gemini 直连可用，亦可一键切换 OpenAI / DeepSeek / Kimi / 通义千问 / SiliconFlow / OpenRouter / Anthropic / Ollama，或完全自定义任意 OpenAI 兼容端点。</p>
+
+    <div class="provbox">
+      <label>当前 AI 服务商</label>
+      <select id="prov-sel"></select>
+      <div class="hint" id="prov-hint"></div>
+    </div>
+
+    <div class="provbox" id="keybox">
+      <label>API Key <span class="hint" id="key-builtin" style="display:inline"></span></label>
+      <input type="password" id="prov-key" placeholder="粘贴你的 API Key（留空则用内置）" autocomplete="off">
+      <label>模型名</label>
+      <input type="text" id="prov-model" placeholder="如 glm-4.7-flash">
+      <div id="prov-extra"></div>
+    </div>
+
+    <div style="text-align:center;margin-top:6px">
+      <button class="alt" id="prov-test">🔌 测试连接</button>
+      <button class="alt" id="prov-save">💾 保存配置</button>
+    </div>
+    <div class="ai-out" id="prov-out" style="min-height:30px">尚未测试。</div>
+    <div class="warn">⚠ 安全提示：前端内置/填写的 Key 可被浏览器源码读取。自用或内部分享无妨；如需公网发布，建议套一层极简后端代理转发，勿把 Key 写进公开仓库。</div>
+
+    <h2 style="margin-top:26px">📤 数据导出</h2>
+    <p class="lead">导出全部氨基酸数据、记忆进度或序列分析结果。</p>
+    <div style="text-align:center">
+      <button class="alt" id="exp-csv">导出全表 CSV</button>
+      <button class="alt" id="exp-md">导出全表 Markdown</button>
+      <button class="alt" id="exp-json">导出全表 JSON</button>
+      <button class="alt" id="exp-srs">导出记忆进度</button>
+    </div>
+  </div>
+
+  <div class="foot">氨基酸随机抽取器 · 大师版 — 单文件 / 零依赖 / 移动端可用 · AI 由你配置</div>
+</div>
+
+<script>
+/* =========================================================
+   一、原始 21 种氨基酸数据（R 基字符串逐字保留，保证原版结构图一致）
+   ========================================================= */
+const aminoAcids = [
+  { cn:"丙氨酸",   en:"Alanine",       three:"Ala", one:"A", r:"—CH₃" },
+  { cn:"精氨酸",   en:"Arginine",      three:"Arg", one:"R", r:"—CH₂—CH₂—CH₂—NH—C(=NH)—NH₂" },
+  { cn:"天冬酰胺", en:"Asparagine",    three:"Asn", one:"N", r:"—CH₂—C(=O)—NH₂" },
+  { cn:"天冬氨酸", en:"Aspartic acid", three:"Asp", one:"D", r:"—CH₂—COOH" },
+  { cn:"半胱氨酸", en:"Cysteine",      three:"Cys", one:"C", r:"—CH₂—SH" },
+  { cn:"谷氨酰胺", en:"Glutamine",     three:"Gln", one:"Q", r:"—CH₂—CH₂—C(=O)—NH₂" },
+  { cn:"谷氨酸",   en:"Glutamic acid", three:"Glu", one:"E", r:"—CH₂—CH₂—COOH" },
+  { cn:"甘氨酸",   en:"Glycine",       three:"Gly", one:"G", r:"—H" },
+  { cn:"组氨酸",   en:"Histidine",     three:"His", one:"H", r:"—CH₂—C₃H₃N₂（咪唑基）" },
+  { cn:"异亮氨酸", en:"Isoleucine",    three:"Ile", one:"I", r:"—CH(CH₃)—CH₂—CH₃" },
+  { cn:"亮氨酸",   en:"Leucine",       three:"Leu", one:"L", r:"—CH₂—CH(CH₃)₂" },
+  { cn:"赖氨酸",   en:"Lysine",        three:"Lys", one:"K", r:"—CH₂—CH₂—CH₂—CH₂—NH₂" },
+  { cn:"甲硫氨酸", en:"Methionine",    three:"Met", one:"M", r:"—CH₂—CH₂—S—CH₃" },
+  { cn:"苯丙氨酸", en:"Phenylalanine", three:"Phe", one:"F", r:"—CH₂—C₆H₅（苯甲基）" },
+  { cn:"脯氨酸",   en:"Proline",       three:"Pro", one:"P", r:"—CH₂—CH₂—CH₂—（与α-N成环）",
+    note:"亚氨基酸：α-氨基的 N 参与成环，不是游离 NH₂" },
+  { cn:"丝氨酸",   en:"Serine",        three:"Ser", one:"S", r:"—CH₂—OH" },
+  { cn:"苏氨酸",   en:"Threonine",     three:"Thr", one:"T", r:"—CH(OH)—CH₃" },
+  { cn:"色氨酸",   en:"Tryptophan",    three:"Trp", one:"W", r:"—CH₂—C₈H₆N（吲哚基）" },
+  { cn:"酪氨酸",   en:"Tyrosine",      three:"Tyr", one:"Y", r:"—CH₂—C₆H₄—OH" },
+  { cn:"缬氨酸",   en:"Valine",        three:"Val", one:"V", r:"—CH(CH₃)₂" },
+  { cn:"硒半胱氨酸", en:"Selenocysteine", three:"Sec", one:"U", r:"—CH₂—SeH" }
+];
+
+/* 扩展属性：分子式 / 残基分子量 / 等电点 pI / 分类 / 是否必需 / 密码子 / 疏水性(KD) / pH7电荷 */
+const EXTRA = {
+  A:{formula:"C₃H₇NO₂", mw:71.08, pI:6.01, cat:"非极性脂肪族", ess:false, codons:["GCU","GCC","GCA","GCG"], kd:1.8, charge:0},
+  R:{formula:"C₆H₁₄N₄O₂", mw:156.19, pI:10.76, cat:"碱性(带正电)", ess:true, codons:["CGU","CGC","CGA","CGG","AGA","AGG"], kd:-4.5, charge:1},
+  N:{formula:"C₄H₈N₂O₃", mw:114.10, pI:5.41, cat:"极性中性", ess:false, codons:["AAU","AAC"], kd:-3.5, charge:0},
+  D:{formula:"C₄H₇NO₄", mw:115.09, pI:2.98, cat:"酸性(带负电)", ess:false, codons:["GAU","GAC"], kd:-3.5, charge:-1},
+  C:{formula:"C₃H₇NO₂S", mw:103.14, pI:5.05, cat:"极性中性", ess:false, codons:["UGU","UGC"], kd:2.5, charge:0},
+  Q:{formula:"C₅H₁₀N₂O₃", mw:128.13, pI:5.65, cat:"极性中性", ess:false, codons:["CAA","CAG"], kd:-3.5, charge:0},
+  E:{formula:"C₅H₉NO₄", mw:129.12, pI:3.22, cat:"酸性(带负电)", ess:false, codons:["GAA","GAG"], kd:-3.5, charge:-1},
+  G:{formula:"C₂H₅NO₂", mw:57.05, pI:5.97, cat:"非极性脂肪族", ess:false, codons:["GGU","GGC","GGA","GGG"], kd:-0.4, charge:0},
+  H:{formula:"C₆H₉N₃O₂", mw:137.14, pI:7.59, cat:"碱性(带正电)", ess:true, codons:["CAU","CAC"], kd:-3.2, charge:1},
+  I:{formula:"C₆H₁₃NO₂", mw:113.16, pI:6.02, cat:"非极性脂肪族", ess:true, codons:["AUU","AUC","AUA"], kd:4.5, charge:0},
+  L:{formula:"C₆H₁₃NO₂", mw:113.16, pI:5.98, cat:"非极性脂肪族", ess:true, codons:["UUA","UUG","CUU","CUC","CUA","CUG"], kd:3.8, charge:0},
+  K:{formula:"C₆H₁₄N₂O₂", mw:128.17, pI:9.74, cat:"碱性(带正电)", ess:true, codons:["AAA","AAG"], kd:-3.9, charge:1},
+  M:{formula:"C₅H₁₁NO₂S", mw:131.19, pI:5.74, cat:"非极性脂肪族", ess:true, codons:["AUG"], kd:1.9, charge:0},
+  F:{formula:"C₉H₁₁NO₂", mw:147.18, pI:5.48, cat:"芳香族", ess:true, codons:["UUU","UUC"], kd:2.8, charge:0},
+  P:{formula:"C₅H₉NO₂", mw:97.12, pI:6.30, cat:"亚氨基酸", ess:false, codons:["CCU","CCC","CCA","CCG"], kd:-1.6, charge:0},
+  S:{formula:"C₃H₇NO₃", mw:87.08, pI:5.68, cat:"极性中性", ess:false, codons:["UCU","UCC","UCA","UCG","AGU","AGC"], kd:-0.8, charge:0},
+  T:{formula:"C₄H₉NO₃", mw:101.11, pI:5.60, cat:"极性中性", ess:true, codons:["ACU","ACC","ACA","ACG"], kd:-0.7, charge:0},
+  W:{formula:"C₁₁H₁₂N₂O₂", mw:186.21, pI:5.89, cat:"芳香族", ess:true, codons:["UGG"], kd:-0.9, charge:0},
+  Y:{formula:"C₉H₁₁NO₃", mw:163.18, pI:5.66, cat:"芳香族", ess:false, codons:["UAU","UAC"], kd:-1.3, charge:0},
+  V:{formula:"C₅H₁₁NO₂", mw:99.13, pI:5.97, cat:"非极性脂肪族", ess:true, codons:["GUU","GUC","GUA","GUG"], kd:4.2, charge:0},
+  U:{formula:"C₃H₇NO₂Se", mw:150.05, pI:5.40, cat:"特殊(含Se)", ess:false, codons:["UGA"], kd:0, charge:0}
+};
+
+/* 侧链「珠链」示意（从 α-碳向外，基团级；环系标为名称） */
+const CHAINS = {
+  A:["CH₃"], R:["CH₂","CH₂","CH₂","NH","C(=NH)","NH₂"], N:["CH₂","C(=O)","NH₂"],
+  D:["CH₂","COOH"], C:["CH₂","SH"], Q:["CH₂","CH₂","C(=O)","NH₂"], E:["CH₂","CH₂","COOH"],
+  G:["H"], H:["CH₂","咪唑基"], I:["CH(CH₃)","CH₂","CH₃"], L:["CH₂","CH(CH₃)₂"],
+  K:["CH₂","CH₂","CH₂","CH₂","NH₂"], M:["CH₂","CH₂","S","CH₃"], F:["CH₂","苯基"],
+  P:["CH₂","CH₂","CH₂"], S:["CH₂","OH"], T:["CH(OH)","CH₃"], W:["CH₂","吲哚基"],
+  Y:["CH₂","苯环","OH"], V:["CH(CH₃)₂"], U:["CH₂","SeH"]
+};
+const RINGNOTE = {
+  H:"侧链为咪唑环（芳香杂环，弱碱性，可质子化）",
+  F:"侧链为苄基（苯甲基），疏水芳香族",
+  W:"侧链为吲哚环（含氮双环，最大芳香残基）",
+  Y:"侧链为酚环（苯环+羟基，可磷酸化）",
+  P:"侧链与 α-氨基成吡咯烷环，刚性，常出现在转角"
+};
+
+const AA_BY_ONE = {}; aminoAcids.forEach(a=>AA_BY_ONE[a.one]=a);
+const ONE2EXTRA = EXTRA;
+const THREE2ONE = {}; aminoAcids.forEach(a=>THREE2ONE[a.three]=a.one);
+
+/* =========================================================
+   二、结构式 SVG（原版四键通式，逐字保留）
+   ========================================================= */
+const CX = 350, CY = 140;
+function makeSVG(rText, aa) {
+  const len = rText.length;
+  const rSize = len > 26 ? 15 : (len > 20 ? 17 : 19);
+  const topY   = CY - 68;
+  const botY   = CY + 62;
+  const leftX  = CX - 82;
+  const rightX = CX + 82;
+  // 脚注（教学澄清，2026-09-22）：甘氨酸无手性碳；其余注明此为平面通式、非费歇尔投影式
+  let foot = "";
+  if (aa && aa.one === "G") {
+    foot = `<text x="${CX}" y="308" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#c0392b" font-family="Microsoft YaHei, Arial, sans-serif">⚠️ 甘氨酸 R=H：α-碳连着两个氢，无手性碳（20 种常见氨基酸中唯一），不存在 L/D 异构</text>`;
+  } else {
+    foot = `<text x="${CX}" y="308" text-anchor="middle" font-size="13" fill="#aab4c0" font-family="Microsoft YaHei, Arial, sans-serif">本图为平面结构通式（不是费歇尔投影式）· L-型费歇尔式习惯：COOH 上 / R 下 / NH₂ 左 / H 右</text>`;
+  }
+  return `
+<svg viewBox="0 0 700 322" width="100%"
+     style="max-width:700px;display:block;margin:0 auto"
+     xmlns="http://www.w3.org/2000/svg">
+  <line x1="${CX}" y1="${CY}" x2="${CX}" y2="${topY}" stroke="#27ae60" stroke-width="2.6" stroke-linecap="round"/>
+  <line x1="${CX}" y1="${CY}" x2="${leftX}" y2="${CY}" stroke="#95a5a6" stroke-width="2.6" stroke-linecap="round"/>
+  <line x1="${CX}" y1="${CY}" x2="${rightX}" y2="${CY}" stroke="#16a085" stroke-width="2.6" stroke-linecap="round"/>
+  <line x1="${CX}" y1="${CY}" x2="${CX}" y2="${botY}" stroke="#c0392b" stroke-width="2.6" stroke-linecap="round"/>
+  <circle cx="${CX}" cy="${CY}" r="17" fill="#ffffff"/>
+  <circle cx="${CX}" cy="${CY}" r="17" fill="none" stroke="#dbe6f3" stroke-width="1"/>
+  <text x="${CX}" y="${CY + 10}" text-anchor="middle" font-size="28" font-weight="bold" fill="#1a73e8" font-family="Arial, Helvetica, sans-serif">C</text>
+  <text x="${CX}" y="${topY - 16}" text-anchor="middle" font-size="25" font-weight="bold" fill="#27ae60" font-family="Arial, Helvetica, sans-serif">NH₂</text>
+  <text x="${leftX - 16}" y="${CY + 10}" text-anchor="end" font-size="25" font-weight="bold" fill="#7f8c8d" font-family="Arial, Helvetica, sans-serif">H</text>
+  <text x="${rightX + 16}" y="${CY + 10}" text-anchor="start" font-size="25" font-weight="bold" fill="#16a085" font-family="Arial, Helvetica, sans-serif">COOH</text>
+  <text x="${CX}" y="${botY + 36}" text-anchor="middle" font-size="${rSize}" font-weight="bold" fill="#c0392b" font-family="Arial, Helvetica, sans-serif">${rText}</text>
+  <text x="${CX}" y="282" text-anchor="middle" font-size="13" fill="#aab4c0" font-family="Microsoft YaHei, Arial, sans-serif">
+    α-碳的四个共价键：—NH₂（上）　—H（左）　—COOH（右）　—R 侧链（下）
+  </text>
+  ${foot}
+</svg>`;
+}
+
+/* 费歇尔投影式视图（L-型，2026-09-22 新增）：
+   竖键朝后、横键朝前；习惯排布 COOH 上 / R 下 / NH₂ 左 / H 右。
+   长侧链（≥3 段）沿竖轴向下逐段展开书写（竖键 = 伸向纸后方）；
+   甘氨酸无手性碳，仍可画但必须注明。 */
+function rSegments(rText){
+  let segs = rText.replace(/^—/, '').split('—').map(x=>x.trim()).filter(x=>x.length);
+  // 尾部括号注释（如脯氨酸"（与α-N成环）"）并入上一段，不作为独立链节
+  if (segs.length >= 2 && segs[segs.length-1].startsWith('（')) {
+    segs[segs.length-2] += '—' + segs.pop();
+  }
+  return segs;
+}
+function makeFischerSVG(aa) {
+  const isGly = aa.one === "G";
+  const topY   = CY - 68;
+  const botY   = CY + 62;
+  const leftX  = CX - 82;
+  const rightX = CX + 82;
+  const rText  = aa.r;
+  const rSize  = rText.length > 26 ? 15 : (rText.length > 20 ? 17 : 19);
+  const segs = rSegments(rText);
+  const useChain = segs.length >= 3;
+  const step = 40; // 竖轴链节间距（基线到基线）
+  let capY = 282, footY = 308, H = 322;
+  let chain = '';
+  if (useChain) {
+    const lastBase = botY + 36 + (segs.length - 1) * step;
+    capY  = lastBase + 46;
+    footY = capY + 26;
+    H     = footY + 16;
+    segs.forEach((s, i) => {
+      const y = botY + 36 + i * step;
+      if (i > 0) {
+        const yPrev = botY + 36 + (i - 1) * step;
+        chain += `<line x1="${CX}" y1="${yPrev + 6}" x2="${CX}" y2="${y - 20}" stroke="#c0392b" stroke-width="2.6" stroke-linecap="round"/>`;
+      }
+      chain += `<text x="${CX}" y="${y}" text-anchor="middle" font-size="${rSize}" font-weight="bold" fill="#c0392b" font-family="Arial, Helvetica, sans-serif">${s}</text>`;
+    });
+  } else {
+    chain = `<text x="${CX}" y="${botY + 36}" text-anchor="middle" font-size="${rSize}" font-weight="bold" fill="#c0392b" font-family="Arial, Helvetica, sans-serif">${rText}</text>`;
+  }
+  const foot = isGly
+    ? `<text x="${CX}" y="${footY}" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#c0392b" font-family="Microsoft YaHei, Arial, sans-serif">⚠️ 甘氨酸无手性碳（α-碳连两个氢），其实不存在费歇尔投影式，此图仅作结构示意</text>`
+    : `<text x="${CX}" y="${footY}" text-anchor="middle" font-size="13" fill="#aab4c0" font-family="Microsoft YaHei, Arial, sans-serif">费歇尔投影式（L-型）：横键朝观察者、竖键朝后；COOH 上 / R 下 / NH₂ 左 = L 构型${useChain ? "；长侧链沿竖轴向下展开" : ""}</text>`;
+  return `
+<svg viewBox="0 0 700 ${H}" width="100%"
+     style="max-width:700px;display:block;margin:0 auto"
+     xmlns="http://www.w3.org/2000/svg">
+  <line x1="${CX}" y1="${CY}" x2="${CX}" y2="${topY}" stroke="#16a085" stroke-width="2.6" stroke-linecap="round"/>
+  <line x1="${CX}" y1="${CY}" x2="${leftX}" y2="${CY}" stroke="#27ae60" stroke-width="2.6" stroke-linecap="round"/>
+  <line x1="${CX}" y1="${CY}" x2="${rightX}" y2="${CY}" stroke="#95a5a6" stroke-width="2.6" stroke-linecap="round"/>
+  <line x1="${CX}" y1="${CY}" x2="${CX}" y2="${botY}" stroke="#c0392b" stroke-width="2.6" stroke-linecap="round"/>
+  <circle cx="${CX}" cy="${CY}" r="17" fill="#ffffff"/>
+  <circle cx="${CX}" cy="${CY}" r="17" fill="none" stroke="#dbe6f3" stroke-width="1"/>
+  <text x="${CX}" y="${CY + 10}" text-anchor="middle" font-size="28" font-weight="bold" fill="#1a73e8" font-family="Arial, Helvetica, sans-serif">C</text>
+  <text x="${CX}" y="${topY - 16}" text-anchor="middle" font-size="25" font-weight="bold" fill="#16a085" font-family="Arial, Helvetica, sans-serif">COOH</text>
+  <text x="${leftX - 16}" y="${CY + 10}" text-anchor="end" font-size="25" font-weight="bold" fill="#27ae60" font-family="Arial, Helvetica, sans-serif">NH₂</text>
+  <text x="${rightX + 16}" y="${CY + 10}" text-anchor="start" font-size="25" font-weight="bold" fill="#7f8c8d" font-family="Arial, Helvetica, sans-serif">H</text>
+  ${chain}
+  <text x="${CX}" y="${capY}" text-anchor="middle" font-size="13" fill="#aab4c0" font-family="Microsoft YaHei, Arial, sans-serif">
+    ${aa.cn}（${aa.three}）· L-型费歇尔投影式
+  </text>
+  ${foot}
+</svg>`;
+}
+
+/* =========================================================
+   三、通用多 Provider AI 客户端（任何 AI API 都能用）
+   ========================================================= */
+const BUILTIN = {
+  zhipu: { keys:['REPLACE_WITH_YOUR_ZHIPU_KEY'], fallbackKeys:['REPLACE_WITH_YOUR_ZHIPU_KEY'] },
+  gemini:{ keys:['REPLACE_WITH_YOUR_GEMINI_KEY'], fallbackKeys:[] }
+};
+const AA_PROVIDERS = {
+  zhipu:{ label:"智谱 AutoGLM", icon:"⚡", endpoint:"https://open.bigmodel.cn/api/paas/v4/chat/completions",
+    models:["glm-4-flash","glm-4.7-flash","glm-4.6","glm-4.5-flash"], maxTokens:4096 },
+  gemini:{ label:"Google Gemini", icon:"✦", endpoint:"https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+    models:["gemini-3.5-flash","gemini-3-flash-preview","gemini-3.5-flash-lite"], maxTokens:4096 },
+  openai:{ label:"OpenAI", icon:"🟢", endpoint:"https://api.openai.com/v1/chat/completions",
+    models:["gpt-5.6-terra","gpt-5.6-luna","gpt-6-astra"], keyUrl:"https://platform.openai.com/api-keys" },
+  deepseek:{ label:"DeepSeek", icon:"🐳", endpoint:"https://api.deepseek.com/chat/completions",
+    models:["deepseek-v4-flash","deepseek-v4-pro"], keyUrl:"https://platform.deepseek.com/api_keys" },
+  kimi:{ label:"Kimi 月之暗面", icon:"🌙", endpoint:"https://api.moonshot.cn/v1/chat/completions",
+    models:["kimi-k3","kimi-k2.6"], keyUrl:"https://platform.kimi.com/console/api-keys" },
+  qwen:{ label:"阿里云百炼", icon:"☁️", endpoint:"https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+    models:["qwen3.8-max","qwen-plus"], keyUrl:"https://bailian.console.aliyun.com/?tab=model#/api-key" },
+  siliconflow:{ label:"SiliconFlow 硅基流动", icon:"🌊", endpoint:"https://api.siliconflow.cn/v1/chat/completions",
+    models:["deepseek-ai/DeepSeek-V4-Flash","moonshotai/Kimi-K2.7-Code"], keyUrl:"https://cloud.siliconflow.cn/account/ak" },
+  openrouter:{ label:"OpenRouter", icon:"🛰️", endpoint:"https://openrouter.ai/api/v1/chat/completions",
+    models:["openai/gpt-5.2"], keyUrl:"https://openrouter.ai/keys" },
+  anthropic:{ label:"Anthropic（兼容层）", icon:"🅐", endpoint:"https://api.anthropic.com/v1/chat/completions",
+    models:["claude-sonnet-4-5","claude-haiku-4-5"], keyUrl:"https://console.anthropic.com/settings/keys" },
+  ollama:{ label:"Ollama 本地", icon:"🦙", endpoint:"http://localhost:11434/v1/chat/completions",
+    models:["llama3.2","qwen3:8b","gpt-oss:20b"], local:true },
+  custom:{ label:"自定义（任意 OpenAI 兼容）", icon:"⚙️", endpoint:"", models:[], custom:true }
+};
+
+const LS_KEY = "aa_trainer_state_v1";
+let STATE = loadState();
+function loadState(){
+  try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch(e){ return {}; }
+}
+function saveState(){ try { localStorage.setItem(LS_KEY, JSON.stringify(STATE)); } catch(e){} }
+STATE.provider = STATE.provider || "zhipu";
+STATE.keys = STATE.keys || {};       // {pid: userKey}
+STATE.models = STATE.models || {};   // {pid: userModel}
+STATE.custom = STATE.custom || { endpoint:"", key:"", model:"" };
+STATE.srs = STATE.srs || {};         // {one: {reps,interval,ef,due,last}}
+
+function providerKeys(pid){
+  const b = BUILTIN[pid];
+  const arr = [];
+  if (STATE.keys[pid]) arr.push(STATE.keys[pid]);
+  if (b) { (b.keys||[]).forEach(k=>arr.push(k)); (b.fallbackKeys||[]).forEach(k=>arr.push(k)); }
+  return arr.filter(Boolean);
+}
+function providerModels(pid){
+  if (STATE.models[pid]) return [STATE.models[pid]];
+  if (pid==="custom") return STATE.custom.model ? [STATE.custom.model] : [];
+  return (AA_PROVIDERS[pid].models||[]);
+}
+function providerEndpoint(pid){
+  if (pid==="custom") return STATE.custom.endpoint || "";
+  return AA_PROVIDERS[pid].endpoint || "";
+}
+function buildProviderOrder(){
+  const active = STATE.provider || "zhipu";
+  const all = Object.keys(AA_PROVIDERS);
+  return [active, ...all.filter(p=>p!==active)];
+}
+function parseJSON(text){
+  try { return JSON.parse(text); } catch(e){}
+  const m = text.match(/\{[\s\S]*\}/);
+  if (m) { try { return JSON.parse(m[0]); } catch(e){} }
+  return null;
+}
+async function chatOnce(endpoint, key, model, systemText, userText, opts){
+  const ctrl = new AbortController();
+  const to = setTimeout(()=>ctrl.abort(), (opts.timeout||30000));
+  const body = {
+    model,
+    messages:[{role:"system",content:systemText},{role:"user",content:userText}],
+    max_tokens: opts.maxTokens || 4096,
+    temperature: opts.temperature!=null?opts.temperature:0.7,
+    stream:false
+  };
+  let res;
+  try {
+    res = await fetch(endpoint, {
+      method:"POST",
+      headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+key },
+      body: JSON.stringify(body),
+      signal: ctrl.signal
+    });
+  } finally { clearTimeout(to); }
+  if (!res.ok) {
+    let msg = "HTTP "+res.status;
+    try { const j = await res.json(); if (j && j.error && j.error.message) msg += " "+j.error.message; } catch(e){}
+    throw new Error(msg);
+  }
+  const j = await res.json();
+  const txt = j.choices && j.choices[0] && j.choices[0].message ? j.choices[0].message.content : "";
+  return txt;
+}
+/* 主入口：跨 provider / key / 模型 自动降级 */
+async function callLLM(systemText, userText, opts){
+  opts = opts || {};
+  const order = buildProviderOrder();
+  let lastErr = null;
+  for (const pid of order) {
+    const endpoint = providerEndpoint(pid);
+    if (!endpoint) continue;
+    const keys = providerKeys(pid);
+    const models = providerModels(pid);
+    if (!keys.length || !models.length) continue;
+    for (const key of keys) {
+      for (const model of models) {
+        try {
+          const text = await chatOnce(endpoint, key, model, systemText, userText, opts);
+          if (text && text.trim()) return { ok:true, text, provider:AA_PROVIDERS[pid].label, model, pid };
+        } catch(e) { lastErr = e; }
+      }
+    }
+  }
+  return { ok:false, error: lastErr ? (lastErr.message||String(lastErr)) : "无可用 Provider / Key" };
+}
+
+/* =========================================================
+   四、英雄区抽取 + 详情
+   ========================================================= */
+let currentAA = null;
+let fischerMode = false;
+function renderHeroSVG(){
+  if (!currentAA) return;
+  document.getElementById('svgwrap').innerHTML =
+    fischerMode ? makeFischerSVG(currentAA) : makeSVG(currentAA.r, currentAA);
+}
+function draw() {
+  const aa = aminoAcids[Math.floor(Math.random() * aminoAcids.length)];
+  currentAA = aa;
+  document.getElementById('name').textContent = aa.cn;
+  document.getElementById('detail').innerHTML =
+      `英文：${aa.en}　｜　三字母：<b>${aa.three}</b>　｜　单字母：<b>${aa.one}</b>`;
+  document.getElementById('note').textContent = aa.note || '';
+  renderHeroSVG();
+  renderInfo(aa);
+  document.getElementById('btn-ai').disabled = false;
+}
+function renderInfo(aa){
+  const ex = ONE2EXTRA[aa.one];
+  const info = document.getElementById('info');
+  info.classList.add('show');
+  document.getElementById('info-title').textContent = aa.cn + "（" + aa.en + " · " + aa.three + " / " + aa.one + "）";
+  const grid = document.getElementById('info-grid');
+  grid.innerHTML = `
+    <div class="k">分子式</div><div class="v">${ex.formula}</div>
+    <div class="k">残基分子量</div><div class="v">${ex.mw}</div>
+    <div class="k">等电点 pI</div><div class="v">${ex.pI}</div>
+    <div class="k">分类</div><div class="v">${ex.cat}</div>
+    <div class="k">人体必需</div><div class="v">${ex.ess?"是":"否"}</div>
+    <div class="k">pH 7 净电荷</div><div class="v">${ex.charge>0?"+"+ex.charge:ex.charge}</div>
+    <div class="k">疏水性(KD)</div><div class="v">${ex.kd}</div>
+    <div class="k">密码子</div><div class="v">${ex.codons.join("、")}</div>`;
+  const beads = document.getElementById('beads');
+  const chain = CHAINS[aa.one] || [];
+  let html = `<span class="bead" style="border-color:#16a085;color:#16a085">α-C</span>`;
+  chain.forEach((b,i)=>{
+    html += `<span class="bond">—</span><span class="bead">${b}</span>`;
+  });
+  beads.innerHTML = html;
+  document.getElementById('ringnote').textContent = RINGNOTE[aa.one] ? ("📌 "+RINGNOTE[aa.one]) : "";
+}
+
+/* =========================================================
+   五、AI 讲解
+   ========================================================= */
+function fillAiSel(){
+  const sel = document.getElementById('ai-sel');
+  sel.innerHTML = aminoAcids.map(a=>`<option value="${a.one}">${a.cn}（${a.three}/${a.one}）</option>`).join("");
+}
+async function aiExplain(one){
+  const aa = AA_BY_ONE[one]; if(!aa) return;
+  const ex = ONE2EXTRA[one];
+  const out = document.getElementById('ai-out');
+  out.className = "ai-out loading"; out.textContent = "AI 正在讲解…（若长时间无响应，请在「设置 / AI」切换或测试提供商）";
+  const sys = "你是生物助教。用中文、面向高中生/大学生，讲解一种氨基酸：结构要点、分类依据、生理功能、记忆口诀、考试易错点。简洁有重点，不超过 320 字。";
+  const user = `请讲解：${aa.cn}（${aa.en}，${aa.three}/${aa.one}），R 基：${aa.r}，类别：${ex.cat}，pI=${ex.pI}，是否必需=${ex.ess?"是":"否"}。${aa.note?("备注："+aa.note):""}`;
+  const r = await callLLM(sys, user, { maxTokens: 700, temperature: 0.6 });
+  if (r.ok) {
+    out.className = "ai-out"; out.textContent = r.text.trim();
+    const b = document.createElement('span'); b.className='badge'; b.textContent = r.provider+" · "+r.model; out.appendChild(b);
+  } else {
+    out.className = "ai-out";
+    out.textContent = "❌ 调用失败：" + r.error + netFailHint();
+  }
+}
+
+/* 网络层失败（Failed to fetch）的环境自检提示：
+   实测结论——公网页面（无 CSP）+ 真实 Chrome 直连智谱返回 200；
+   而 WorkBuddy 内置预览面板（127.0.0.1 静态服务）带 CSP：
+   connect-src 'self' http://127.0.0.1:* https://*.map.qq.com ...，未放行 open.bigmodel.cn，
+   因此在预览面板里调用外部 API 必定 Failed to fetch。 */
+function netFailHint(){
+  const h = location.hostname;
+  const inPreview = (h === "127.0.0.1" || h === "localhost" || location.protocol === "file:");
+  if (inPreview) {
+    return "\n\n🔍 已定位：你现在是在「内置预览面板 / 本地文件」里打开的本页面。" +
+      "\n预览面板有安全策略（CSP），只允许访问本站域名和腾讯地图系域名，open.bigmodel.cn 等一切外部 API 都会被它拦截——这不是代码、Key 或网络的问题。" +
+      "\n\n✅ 解决办法：复制公网链接，用 Safari / Chrome 真实浏览器打开，AI 功能即可正常使用。" +
+      "\n（公网页面无 CSP 限制，实测直连智谱返回 200）";
+  }
+  return "\n\n这是「浏览器 → 智谱服务器」的网络层失败（已用真实 Chrome 验证：代码与 Key 本身正常，能返回 200）。常见原因：" +
+    "\n① 浏览器扩展（广告/隐私拦截类）拦了 open.bigmodel.cn；" +
+    "\n② 当前网络（校园网 / 公司防火墙）禁止访问外部 API 域名；" +
+    "\n③ 页面是旧缓存（按 Ctrl/Cmd+Shift+R 强刷）。" +
+    "\n\n先试：无痕窗口 / 换浏览器 / 关扩展后重试。";
+}
+
+/* =========================================================
+   六、出题测验（规则题离线 + 可选 AI）
+   ========================================================= */
+const CATS = ["非极性脂肪族","极性中性","酸性(带负电)","碱性(带正电)","芳香族","亚氨基酸","特殊(含Se)"];
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function pick(n, pool){ return shuffle(pool).slice(0, n); }
+
+function makeRuleQuestions(n, type){
+  const qs = [];
+  const makers = {
+    name: ()=>{ const a=pick(1,aminoAcids)[0]; const ans=a.cn; const opts=shuffle([a.cn,...pick(3,aminoAcids.filter(x=>x.cn!==a.cn)).map(x=>x.cn)]);
+      return {q:`单字母「${a.one}」对应哪种氨基酸？`, opts, ans, kind:"name", aa:a.one}; },
+    three: ()=>{ const a=pick(1,aminoAcids)[0]; const opts=shuffle([a.three,...pick(3,aminoAcids.filter(x=>x.three!==a.three)).map(x=>x.three)]);
+      return {q:`「${a.cn}」的三字母缩写是？`, opts, ans:a.three, kind:"three", aa:a.one}; },
+    cat: ()=>{ const a=pick(1,aminoAcids)[0]; const correct=ONE2EXTRA[a.one].cat;
+      const opts=shuffle([correct, ...pick(3, CATS.filter(c=>c!==correct))]);
+      return {q:`「${a.cn}」属于哪一类？`, opts, ans:correct, kind:"cat", aa:a.one}; },
+    charge: ()=>{ const a=pick(1,aminoAcids)[0]; const c=ONE2EXTRA[a.one].charge;
+      const correct=c>0?"带正电（+1）":(c<0?"带负电（-1）":"电中性（0）");
+      const CHG_POOL=["带正电（+1）","带负电（-1）","电中性（0）","带两个正电（+2）"];
+      const opts=shuffle([correct, ...pick(3, CHG_POOL.filter(x=>x!==correct))]);
+      return {q:`pH 7 时「${a.cn}」的净电荷是？`, opts, ans:correct, kind:"charge", aa:a.one}; },
+    ess: ()=>{ const a=pick(1,aminoAcids)[0]; const correct=ONE2EXTRA[a.one].ess?"人体必需":"非必需";
+      const ESS_POOL=["人体必需","非必需","条件必需","婴儿必需"];
+      const opts=shuffle([correct, ...pick(3, ESS_POOL.filter(x=>x!==correct))]);
+      return {q:`「${a.cn}」是否人体必需氨基酸？`, opts, ans:correct, kind:"ess", aa:a.one}; },
+    codon: ()=>{ const a=pick(1,aminoAcids)[0]; const cod=pick(1,ONE2EXTRA[a.one].codons)[0];
+      const others=aminoAcids.filter(x=>x.one!==a.one); const opts=shuffle([a.cn,...pick(3,others).map(x=>x.cn)]);
+      return {q:`密码子「${cod}」编码哪种氨基酸？`, opts, ans:a.cn, kind:"codon", aa:a.one}; },
+    rgroup: ()=>{ const a=pick(1,aminoAcids)[0]; const opts=shuffle([a.cn,...pick(3,aminoAcids.filter(x=>x.cn!==a.cn)).map(x=>x.cn)]);
+      return {q:`R 基为 ${a.r} 的是哪种氨基酸？`, opts, ans:a.cn, kind:"rgroup", aa:a.one}; }
+  };
+  const typeMap = {
+    mix:["name","three","cat","charge","ess","codon","rgroup"],
+    name:["name","three"], cat:["cat","charge","ess"], codon:["codon"], rgroup:["rgroup"]
+  };
+  const pool = typeMap[type] || typeMap.mix;
+  for (let i=0;i<n;i++){ const t = pool[i % pool.length]; qs.push(makers[t]()); }
+  return qs;
+}
+function renderQuiz(qs){
+  const area = document.getElementById('quiz-area');
+  area.innerHTML = "";
+  let idx = 0, correct = 0;
+  const prog = document.getElementById('quiz-prog');
+  prog.style.width = "0%";
+  function showQ(){
+    if (idx >= qs.length){ finish(); return; }
+    const q = qs[idx];
+    const card = document.createElement('div'); card.className="qcard";
+    card.innerHTML = `<div class="qt">${idx+1}. ${q.q}</div><div class="opts"></div><div class="qmeta"></div>`;
+    const optsWrap = card.querySelector('.opts');
+    shuffle(q.opts).forEach(o=>{
+      const b = document.createElement('button'); b.className="opt"; b.textContent=o;
+      b.onclick = ()=>{
+        optsWrap.querySelectorAll('.opt').forEach(x=>x.disabled=true);
+        const right = (o === q.ans);
+        optsWrap.querySelectorAll('.opt').forEach(x=>{ if(x.textContent===q.ans) x.classList.add('correct'); });
+        if(!right) b.classList.add('wrong');
+        if(right) correct++;
+        // SRS：答对 quality=5，答错 quality=1
+        srsReview(q.aa, right?5:1);
+        idx++; prog.style.width = (idx/qs.length*100)+"%";
+        card.querySelector('.qmeta').textContent = right ? "✅ 正确" : ("❌ 正确答案：" + q.ans);
+        setTimeout(showQ, 650);
+      };
+      optsWrap.appendChild(b);
+    });
+    area.appendChild(card);
+  }
+  function finish(){
+    const score = Math.round(correct/qs.length*100);
+    const sb = document.getElementById('quiz-score'); sb.style.display="block";
+    sb.textContent = `得分 ${score} 分（${correct}/${qs.length}）— 已自动更新记忆复习进度`;
+    prog.style.width = "100%";
+  }
+  showQ();
+}
+
+/* AI 出题 + 判卷 */
+async function aiQuiz(n){
+  const area = document.getElementById('quiz-area');
+  area.innerHTML = '<div class="ai-out loading">🤖 正在用 AI 生成题目…</div>';
+  const sys = `你是生物题库生成器。围绕 21 种常见氨基酸（含 Sec 硒半胱氨酸）出题。
+输出严格 JSON 数组，每项：{"q":"题干","a":"标准答案（简短）","type":"填空|简答","explain":"一句话解析"}。
+不要输出 JSON 以外的任何内容。`;
+  const user = `生成 ${n} 道题，覆盖：名称/三字母/单字母、分类、R 基、必需性、密码子、pI、功能。题型以填空和简答混合。`;
+  const r = await callLLM(sys, user, { maxTokens: 2500, temperature: 0.8 });
+  if (!r.ok){ area.innerHTML = '<div class="ai-out">❌ AI 出题失败：'+r.error+'</div>'; return; }
+  const data = parseJSON(r.text);
+  if (!Array.isArray(data)){ area.innerHTML = '<div class="ai-out">❌ AI 返回无法解析为题目：'+r.text.slice(0,200)+'</div>'; return; }
+  area.innerHTML = "";
+  let idx=0, correct=0; const prog=document.getElementById('quiz-prog'); prog.style.width="0%";
+  document.getElementById('quiz-score').style.display="none";
+  async function showQ(){
+    if(idx>=data.length){ const sb=document.getElementById('quiz-score'); sb.style.display="block"; sb.textContent=`AI 批卷完成：${correct}/${data.length} 合格`; prog.style.width="100%"; return; }
+    const item=data[idx];
+    const card=document.createElement('div'); card.className="qcard";
+    card.innerHTML=`<div class="qt">${idx+1}. ${item.q}</div>
+      <input type="text" id="aians-${idx}" placeholder="输入你的答案…">
+      <div class="qmeta"></div>`;
+    area.appendChild(card);
+    const input=card.querySelector('input'); input.focus();
+    const submit=()=>{ grade(item, input.value); };
+    input.addEventListener('keydown', e=>{ if(e.key==='Enter') submit(); });
+    async function grade(item, student){
+      input.disabled=true;
+      const m=card.querySelector('.qmeta'); m.textContent="🤖 判卷中…";
+      const gr=await callLLM(
+        "你是阅卷老师。只输出 JSON：{\"correct\":true|false,\"score\":0-100,\"reason\":\"一句话\"}，不要多余内容。",
+        `题目：${item.q}\n标准答案：${item.a}\n学生作答：${student||"（空）"}`);
+      let res={correct:false,score:0,reason:""};
+      if(gr.ok){ const p=parseJSON(gr.text); if(p) res=p; }
+      else res.reason="判卷失败："+gr.error;
+      m.innerHTML = (res.correct?"✅ 合格":"❌ 待加强") + "（"+ (res.score||0) +"分）" + (res.reason?(" — "+res.reason):"") + "<br>标准答案："+item.a + (item.explain?(" ｜ "+item.explain):"");
+      if(res.score>=60) correct++;
+      idx++; prog.style.width=(idx/data.length*100)+"%";
+      setTimeout(showQ, 400);
+    }
+  }
+  showQ();
+}
+
+/* =========================================================
+   七、记忆复习（SM-2）
+   ========================================================= */
+function srsGet(one){ return STATE.srs[one] || { reps:0, interval:0, ef:2.5, due:0, last:0 }; }
+function srsReview(one, quality){
+  let s = srsGet(one);
+  if (quality < 0) quality = 0; if (quality > 5) quality = 5;
+  if (s.reps === 0) { s.interval = 1; s.reps = 1; }
+  else if (s.reps === 1) { s.interval = 6; s.reps = 2; }
+  else { s.interval = Math.round(s.interval * s.ef); s.reps += 1; }
+  s.ef = s.ef + (0.1 - (5-quality)*(0.08 + (5-quality)*0.02));
+  if (s.ef < 1.3) s.ef = 1.3;
+  if (quality < 3) { s.reps = 0; s.interval = 1; }
+  s.due = Date.now() + s.interval * 86400000;
+  s.last = Date.now();
+  STATE.srs[one] = s; saveState();
+}
+function srsStat(){
+  const now = Date.now();
+  const all = Object.keys(STATE.srs);
+  const due = all.filter(o=>STATE.srs[o].due <= now).length;
+  const learned = all.length;
+  document.getElementById('srs-stat').innerHTML =
+    `已学习 <b>${learned}</b> 种　｜　当前到期待复习 <b style="color:#e67e22">${due}</b> 种`;
+}
+function srsReviewSession(){
+  const now = Date.now();
+  const due = aminoAcids.filter(a=>STATE.srs[a.one] && STATE.srs[a.one].due <= now);
+  const area = document.getElementById('srs-area');
+  if (!due.length){ area.innerHTML = '<div class="ai-out">🎉 当前没有到期内容，去「随机抽取」或「出题测验」积累记忆吧。</div>'; return; }
+  const progwrap=document.getElementById('srs-progwrap'); progwrap.style.display="block";
+  const prog=document.getElementById('srs-prog'); prog.style.width="0%";
+  let idx=0, ok=0;
+  function show(){
+    if(idx>=due.length){ area.innerHTML=`<div class="scorebox">复习完成：${ok}/${due.length} 通过</div>`; progwrap.style.display="none"; srsStat(); return; }
+    const aa=due[idx]; const ex=ONE2EXTRA[aa.one];
+    const card=document.createElement('div'); card.className="qcard";
+    card.innerHTML=`<div class="qt">${idx+1}. 「${aa.one}」(${aa.three}) 是哪种氨基酸？<br><span style="font-size:12px;color:#7f8c8d">提示分类：${ex.cat}</span></div><div class="opts"></div>`;
+    const opts=card.querySelector('.opts');
+    shuffle([aa.cn,...pick(3,aminoAcids.filter(x=>x.cn!==aa.cn)).map(x=>x.cn)]).forEach(o=>{
+      const b=document.createElement('button'); b.className="opt"; b.textContent=o;
+      b.onclick=()=>{
+        opts.querySelectorAll('.opt').forEach(x=>x.disabled=true);
+        const right=(o===aa.cn);
+        opts.querySelectorAll('.opt').forEach(x=>{ if(x.textContent===aa.cn) x.classList.add('correct'); });
+        if(!right) b.classList.add('wrong');
+        if(right) ok++;
+        srsReview(aa.one, right?5:1);
+        idx++; prog.style.width=(idx/due.length*100)+"%";
+        setTimeout(show, 600);
+      };
+      opts.appendChild(b);
+    });
+    area.innerHTML=""; area.appendChild(card);
+  }
+  show();
+}
+
+/* =========================================================
+   八、序列分析
+   ========================================================= */
+function parseSeq(raw){
+  let s = (raw||"").replace(/[^A-Za-z]/g,'');
+  let threeMode=false;
+  if (s.length>=3 && s.length%3===0){
+    const tris=s.match(/.{3}/g);
+    if (tris.every(t=>THREE2ONE.hasOwnProperty(t))) threeMode=true;
+  }
+  let ones;
+  if (threeMode) ones = s.match(/.{3}/g).map(t=>THREE2ONE[t]);
+  else ones = s.toUpperCase().split('').filter(c=>AA_BY_ONE.hasOwnProperty(c));
+  return ones;
+}
+function kdColor(kd){
+  // 疏水(正,红) → 亲水(负,蓝)
+  const t = Math.max(-4.5, Math.min(4.5, kd));
+  const ratio = (t + 4.5) / 9; // 0 亲水 .. 1 疏水
+  const r = Math.round(40 + ratio*180), g = Math.round(120 - Math.abs(t)*10), b = Math.round(200 - ratio*160);
+  return `rgb(${r},${g},${b})`;
+}
+function chargeColor(c){ return c>0?"#c0392b":(c<0?"#2980b9":"#7f8c8d"); }
+function analyzeSeq(){
+  const raw = document.getElementById('seq-in').value;
+  const ones = parseSeq(raw);
+  const out = document.getElementById('seq-out');
+  if (!ones.length){ out.innerHTML='<div class="ai-out">未识别到有效氨基酸序列，请检查输入。</div>'; return; }
+  let totalMW = 18.015; // 两端 H2O
+  let netCharge = 0;
+  const catCount = {};
+  let aromatic=0, cys=0, neg=0, pos=0;
+  const rows = ones.map((o,i)=>{
+    const aa=AA_BY_ONE[o], ex=ONE2EXTRA[o];
+    totalMW += ex.mw; netCharge += ex.charge;
+    catCount[ex.cat]=(catCount[ex.cat]||0)+1;
+    if(ex.cat==="芳香族") aromatic++; if(o==="C") cys++; if(ex.charge<0) neg++; if(ex.charge>0) pos++;
+    return {i,o,aa,ex};
+  });
+  // 疏水性条
+  let strip = '<div class="strip">';
+  rows.forEach(r=>{ strip += `<div class="cell" style="background:${kdColor(r.ex.kd)}" title="${r.aa.cn} 疏水性 ${r.ex.kd}">${r.o}</div>`; });
+  strip += '</div>';
+  // 表格
+  let tbl = '<table class="seq"><tr><th>#</th><th>单</th><th>中文</th><th>分类</th><th>电荷</th><th>KD</th><th>MW</th></tr>';
+  rows.forEach(r=>{ tbl += `<tr><td>${r.i+1}</td><td>${r.o}</td><td>${r.aa.cn}</td><td>${r.ex.cat}</td><td style="color:${chargeColor(r.ex.charge)}">${r.ex.charge>0?"+"+r.ex.charge:r.ex.charge}</td><td>${r.ex.kd}</td><td>${r.ex.mw}</td></tr>`; });
+  tbl += '</table>';
+  // 基序
+  const seqStr = ones.join('');
+  const motifs = [];
+  // N-糖基化 N-X-S/T (X≠P)
+  for (let i=0;i<ones.length-2;i++){
+    if (ones[i]==='N' && ones[i+1]!=='P' && (ones[i+2]==='S'||ones[i+2]==='T')) motifs.push(`N-糖基化位点：第 ${i+1}-${i+3} 位（N-${ones[i+1]}-${ones[i+2]}）`);
+  }
+  // 磷酸化 S/T/Y
+  const phos=[]; ones.forEach((o,i)=>{ if(o==='S'||o==='T'||o==='Y') phos.push(i+1); });
+  if(phos.length) motifs.push(`磷酸化位点（S/T/Y）：第 ${phos.join('、')} 位`);
+  // 二硫键
+  if(cys>=2) motifs.push(`半胱氨酸 ${cys} 个，可形成 ${Math.floor(cys/2)} 对二硫键`);
+  if(aromatic) motifs.push(`芳香族残基 ${aromatic} 个（Phe/Tyr/Trp），多参与疏水核心与发光`);
+  // 碱性簇
+  let run=0,best=0; ones.forEach(o=>{ if(o==='K'||o==='R'||o==='H'){run++;best=Math.max(best,run);}else run=0; });
+  if(best>=3) motifs.push(`存在长度 ${best} 的碱性残基簇（K/R/H），利于 DNA/膜相互作用`);
+
+  let motifHtml = motifs.length ? motifs.map(m=>`<div class="motif">🔎 <b>基序：</b>${m}</div>`).join('') : '<div class="motif">未识别到常见基序。</div>';
+
+  out.innerHTML = `
+    <div style="font-size:14px;margin:10px 0"><b>长度：</b>${ones.length} 残基　<b>总分子量（近似）：</b>${totalMW.toFixed(2)} Da　<b>净电荷(pH7 近似)：</b><span style="color:${chargeColor(netCharge)}">${netCharge>0?"+"+netCharge:netCharge}</span></div>
+    <div style="font-size:13px;color:#7f8c8d">疏水性色谱（红=疏水，蓝=亲水）：</div>
+    ${strip}
+    ${tbl}
+    <div style="font-size:13px;margin-top:8px">分类统计：${Object.entries(catCount).map(([k,v])=>k+" "+v).join("　")}</div>
+    ${motifHtml}`;
+}
+
+/* =========================================================
+   九、设置 / AI UI
+   ========================================================= */
+function fillProvSel(){
+  const sel=document.getElementById('prov-sel');
+  sel.innerHTML = Object.keys(AA_PROVIDERS).map(p=>`<option value="${p}">${AA_PROVIDERS[p].icon} ${AA_PROVIDERS[p].label}</option>`).join("");
+  sel.value = STATE.provider;
+  sel.onchange = ()=>applyProvider(sel.value);
+  applyProvider(STATE.provider);
+}
+function applyProvider(pid){
+  STATE.provider = pid; saveState();
+  const p = AA_PROVIDERS[pid];
+  document.getElementById('prov-sel').value = pid;
+  const hint = document.getElementById('prov-hint');
+  hint.textContent = p.custom ? "填写你的任意 OpenAI 兼容端点、Key 与模型。" : ("端点：" + p.endpoint);
+  const keyBuiltin = document.getElementById('key-builtin');
+  const hasBuiltin = BUILTIN[pid] && (BUILTIN[pid].keys.length || BUILTIN[pid].fallbackKeys.length);
+  keyBuiltin.style.display = hasBuiltin ? "inline" : "none";
+  keyBuiltin.textContent = hasBuiltin ? "（该服务商已内置可用 Key，留空即用）" : "";
+  const keyInput = document.getElementById('prov-key');
+  const modelInput = document.getElementById('prov-model');
+  const extra = document.getElementById('prov-extra');
+  if (pid === "custom"){
+    keyInput.placeholder = "你的 API Key"; modelInput.placeholder = "模型名（如 gpt-4o）";
+    extra.innerHTML = `<label>自定义端点 URL</label><input type="text" id="prov-endpoint" placeholder="https://.../v1/chat/completions" value="${STATE.custom.endpoint||''}">`;
+    keyInput.value = STATE.custom.key||""; modelInput.value = STATE.custom.model||"";
+  } else {
+    extra.innerHTML = p.keyUrl ? `<div class="hint">申请 Key：${p.keyUrl}</div>` : "";
+    keyInput.value = STATE.keys[pid] || "";
+    modelInput.value = STATE.models[pid] || (p.models[0]||"");
+    modelInput.placeholder = "模型名（默认 "+(p.models[0]||"")+"）";
+  }
+}
+function saveProvider(){
+  const pid = STATE.provider;
+  if (pid === "custom"){
+    STATE.custom = {
+      endpoint: document.getElementById('prov-endpoint').value.trim(),
+      key: document.getElementById('prov-key').value.trim(),
+      model: document.getElementById('prov-model').value.trim()
+    };
+  } else {
+    STATE.keys[pid] = document.getElementById('prov-key').value.trim();
+    STATE.models[pid] = document.getElementById('prov-model').value.trim();
+  }
+  saveState();
+  const o = document.getElementById('prov-out'); o.className="ai-out okmsg"; o.textContent="✅ 已保存：" + AA_PROVIDERS[pid].label;
+}
+async function testProvider(){
+  const pid = STATE.provider;
+  const o = document.getElementById('prov-out'); o.className="ai-out loading"; o.textContent="🔌 测试中…";
+  // 临时把 STATE.provider 指向被测（callLLM 使用它），但 custom 直接用自身
+  const saveP = STATE.provider;
+  const r = await callLLM("用中文一句话回答：你是谁？", "只回：我是氨基酸助教。", { maxTokens: 50, temperature: 0.2 });
+  if (r.ok){ o.className="ai-out okmsg"; o.textContent="✅ 连接成功：" + r.provider + " · " + r.model + "\n" + r.text.trim(); }
+  else {
+    const hint = (r.error && r.error.indexOf("Failed to fetch")>=0) ? netFailHint() : "";
+    o.className="ai-out"; o.textContent="❌ 连接失败：" + r.error + hint;
+  }
+}
+
+/* =========================================================
+   十、导出
+   ========================================================= */
+function download(name, content, type){
+  const blob = new Blob([content], {type: type||"text/plain;charset=utf-8"});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+}
+function exportAll(format){
+  const header = ["中文名","英文名","三字母","单字母","R基","分子式","残基MW","pI","分类","必需","pH7电荷","KD","密码子"];
+  const rows = aminoAcids.map(a=>{ const e=ONE2EXTRA[a.one]; return [a.cn,a.en,a.three,a.one,a.r,e.formula,e.mw,e.pI,e.cat,e.ess?"是":"否",e.charge,e.kd,e.codons.join(" ")]; });
+  if (format==="csv"){
+    const csv = [header.join(",")].concat(rows.map(r=>r.map(c=>/[,，\n]/.test(c)?('"'+c+'"'):c).join(","))).join("\n");
+    download("amino_acids.csv", "﻿"+csv, "text/csv;charset=utf-8");
+  } else if (format==="json"){
+    download("amino_acids.json", JSON.stringify(aminoAcids.map(a=>({...a, ...ONE2EXTRA[a.one]})), null, 2), "application/json");
+  } else if (format==="md"){
+    let md = "# 21 种氨基酸数据表\n\n| "+header.join(" | ")+" |\n|"+header.map(()=>"---").join("|")+"|\n";
+    rows.forEach(r=>{ md += "| "+r.join(" | ")+" |\n"; });
+    download("amino_acids.md", md, "text/markdown;charset=utf-8");
+  }
+}
+function exportSRS(){
+  download("amino_srs.json", JSON.stringify(STATE.srs, null, 2), "application/json");
+}
+
+/* =========================================================
+   十一、事件绑定 / 初始化
+   ========================================================= */
+function switchTab(tab){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===tab));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+tab).classList.add('active');
+  if (tab==='srs') srsStat();
+  if (tab==='ai') fillAiSel();
+}
+document.getElementById('tabs').addEventListener('click', e=>{
+  const t = e.target.closest('.tab'); if(t) switchTab(t.dataset.tab);
+});
+document.getElementById('btn').addEventListener('click', draw);
+document.addEventListener('keydown', e=>{
+  if (e.code === 'Space' && document.getElementById('panel-home').classList.contains('active')
+      && document.activeElement.tagName!=='INPUT' && document.activeElement.tagName!=='TEXTAREA'){
+    e.preventDefault(); draw();
+  }
+});
+document.getElementById('btn-ai').addEventListener('click', ()=>{
+  if(!currentAA) return;
+  switchTab('ai');
+  document.getElementById('ai-sel').value = currentAA.one;
+  aiExplain(currentAA.one);
+});
+document.getElementById('btn-srs').addEventListener('click', ()=>{ if(currentAA){ srsReview(currentAA.one, 3); srsStat(); alert("已将 "+currentAA.cn+" 加入记忆复习。"); } });
+
+document.getElementById('ai-go').addEventListener('click', ()=>aiExplain(document.getElementById('ai-sel').value));
+document.getElementById('quiz-go').addEventListener('click', ()=>{
+  const n = parseInt(document.getElementById('quiz-n').value,10);
+  const type = document.getElementById('quiz-type').value;
+  document.getElementById('quiz-score').style.display="none";
+  if (document.getElementById('quiz-ai').checked) aiQuiz(n); else renderQuiz(makeRuleQuestions(n, type));
+});
+document.getElementById('srs-go').addEventListener('click', srsReviewSession);
+document.getElementById('srs-reset').addEventListener('click', ()=>{ if(confirm("确定清空全部记忆进度？")){ STATE.srs={}; saveState(); srsStat(); document.getElementById('srs-area').innerHTML=""; } });
+document.getElementById('seq-go').addEventListener('click', analyzeSeq);
+document.getElementById('seq-clear').addEventListener('click', ()=>{ document.getElementById('seq-in').value=""; document.getElementById('seq-out').innerHTML=""; });
+
+document.getElementById('prov-save').addEventListener('click', saveProvider);
+document.getElementById('prov-test').addEventListener('click', testProvider);
+document.getElementById('exp-csv').addEventListener('click', ()=>exportAll('csv'));
+document.getElementById('exp-md').addEventListener('click', ()=>exportAll('md'));
+document.getElementById('exp-json').addEventListener('click', ()=>exportAll('json'));
+document.getElementById('exp-srs').addEventListener('click', exportSRS);
+document.getElementById('fisch-toggle').addEventListener('change', e=>{ fischerMode = e.target.checked; renderHeroSVG(); });
+
+/* 初始：显示通用通式 */
+document.getElementById('svgwrap').innerHTML = makeSVG('—R（可变侧链）');
+fillProvSel();
+fillAiSel();
+srsStat();
+</script>
+</body>
+</html>
